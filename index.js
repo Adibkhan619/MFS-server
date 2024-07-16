@@ -21,6 +21,7 @@ const client = new MongoClient(uri, {
 async function run() {
     try {
         const userCollection = client.db("mfs").collection("users");
+        const transactionCollection = client.db("mfs").collection("transactions");
 
         // GET ALL USER DATA ---------->
         app.get("/users",  async (req, res) => {
@@ -35,7 +36,6 @@ async function run() {
         })
 
 // MAKE AGENT -------->
-
 app.patch("/users/:id",  async (req, res) => {
     const id = req.params.id;
     const filter = { _id: new ObjectId(id) };
@@ -45,26 +45,83 @@ app.patch("/users/:id",  async (req, res) => {
             status: "Active"
         },
         $inc: {
-            money: parseFloat(10000)
-        },
-        
+            balance: parseFloat(10000)
+        }, 
     };
     const result = await userCollection.updateOne(filter, updateDoc);
     res.send(result);
 });
 
-// ACTIVE USERS ------------> 
-app.patch("/users/active/:id",  async (req, res) => {
+// ACTIVATE USERS ------------> 
+app.patch("/users/activate/:id",  async (req, res) => {
     const id = req.params.id;
     const filter = { _id: new ObjectId(id) };
     const updateDoc = {
         $set: {
             status: "Active"
-        },       
+        },     
+        $inc: {
+            balance: parseFloat(40)
+        },   
     };
     const result = await userCollection.updateOne(filter, updateDoc);
     res.send(result);
 });
+
+// USER BY EMAIL ----------->
+app.get("/users/:email", async(req, res) => {
+    const email = req.params.email
+    const query = {email: email}
+    const result = await userCollection.findOne(query)
+    res.send(result)
+})
+    
+
+app.post("/transactions", async (req, res) => {
+    const transactions = req.body
+    const result = await transactionCollection.insertOne(transactions)
+    res.send(result)
+})
+
+app.get("/transactions", async(req,res) => {
+    const result = await transactionCollection.find().toArray()
+    res.send(result)
+})
+
+// SEND MONEY ---->
+app.patch("/send-money/:mobile", async(req, res) =>{
+    const mobile = req.params.mobile
+    const {moneyChange} = req.body
+    const query = {mobile: mobile}
+    const updateDoc = {   
+        $inc: {
+            balance: parseFloat(moneyChange)
+        },   
+    };
+    const result = await userCollection.updateOne(query, updateDoc);
+    res.send(result);
+})
+
+app.patch("/reduce-money/:id", async (req, res) =>{
+    const id = req.params.id
+    const {moneyChange} = req.body
+    const filter = { _id: new ObjectId(id) };
+    const updateDoc = {  
+        $inc: {
+            balance: parseFloat(moneyChange)
+        },   
+    };
+    const result = await userCollection.updateOne(filter, updateDoc);
+    res.send(result);
+})
+
+
+
+
+
+
+
+
 
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
