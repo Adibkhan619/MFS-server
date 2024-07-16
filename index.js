@@ -53,6 +53,19 @@ app.patch("/users/:id",  async (req, res) => {
     res.send(result);
 });
 
+// ACTIVE USERS ------------> 
+app.patch("/users/active/:id",  async (req, res) => {
+    const id = req.params.id;
+    const filter = { _id: new ObjectId(id) };
+    const updateDoc = {
+        $set: {
+            status: "Active"
+        },       
+    };
+    const result = await userCollection.updateOne(filter, updateDoc);
+    res.send(result);
+});
+
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
         // Send a ping to confirm a successful connection
