@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const app = express();
+const bcrypt = require('bcryptjs');
 require("dotenv").config();
 const port = process.env.PORT || 5000;
 
@@ -29,11 +30,37 @@ async function run() {
             res.send(result);
         });
 
+        // REGISTER USER INTO DB --------->
         app.post("/users", async(req, res) =>{
             const user = req.body;
-            const result = await userCollection.insertOne(user)
+            const saltRounds = 10;
+             user.PIN = await bcrypt.hash(user.PIN, saltRounds);
+            const result = await userCollection.insertOne(user);
+              
+            console.log(result);
             res.send(result)
         })
+
+        // LOGIN ------->
+        app.post('/login', async (req, res) => {
+            const { email, PIN } = req.body; 
+            try {
+              // Find the user in the database
+              const user = await userCollection.findOne({ email });               
+              // Compare the provided PIN with the hashed PIN in the database
+              const isMatch = await bcrypt.compare(PIN, user.PIN);
+              
+              if (isMatch) {
+                res.status(200).send('Login successful hoyeche');
+              } else {
+                res.status(401).send('Invalid PIN');
+              }
+            } catch (error) {
+              res.status(500).send(error.message);
+            }
+          });
+
+
 
 // MAKE AGENT -------->
 app.patch("/users/:id",  async (req, res) => {
@@ -101,6 +128,7 @@ app.patch("/send-money/:mobile", async(req, res) =>{
     const result = await userCollection.updateOne(query, updateDoc);
     res.send(result);
 })
+
 
 app.patch("/reduce-money/:id", async (req, res) =>{
     const id = req.params.id
