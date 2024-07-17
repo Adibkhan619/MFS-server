@@ -177,6 +177,19 @@ app.get("/cash-in", async(req, res) => {
     res.send(result)
 })
 
+// CASH OUT -------->
+app.post("/cash-out", async(req, res) => {
+    const cashOut = req.body
+    const result = await cashOutCollection.insertOne(cashOut)
+    res.send(result)
+})
+
+// GET CASH OUT -------->
+app.get("/cash-out", async(req, res) => {
+    const result = await cashOutCollection.find().toArray()
+    res.send(result)
+})
+
 app.get("/cash-in/:id", async(req, res) => {
     const id = req.params.id
     const filter = { _id: new ObjectId(id) };
@@ -207,6 +220,25 @@ app.post("/cash-out", async(req, res) => {
 app.get("/cash-out", async(req, res) => {
     const result = await cashOutCollection.find().toArray()
     res.send(result)
+})
+
+app.get("/cash-out/:id", async(req, res) => {
+    const id = req.params.id
+    const filter = { _id: new ObjectId(id) };
+    const result = await cashOutCollection.findOne(filter)
+    res.send(result)
+})
+
+app.patch("/cash-out/:id", async(req, res) =>{
+    const id = req.params.id
+    const filter = { _id: new ObjectId(id) };
+    const updateDoc = {
+        $set: {
+            status: "Approved"
+        },      
+    };
+    const result = await cashOutCollection.updateOne(filter, updateDoc);
+    res.send(result);
 })
 
 // PIN VALIDATION --------->
