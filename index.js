@@ -23,6 +23,8 @@ async function run() {
     try {
         const userCollection = client.db("mfs").collection("users");
         const transactionCollection = client.db("mfs").collection("transactions");
+        const cashInCollection = client.db("mfs").collection("cashIn");
+        const cashOutCollection = client.db("mfs").collection("cashOut");
 
         // GET ALL USER DATA ---------->
         app.get("/users",  async (req, res) => {
@@ -95,6 +97,20 @@ app.patch("/users/activate/:id",  async (req, res) => {
     res.send(result);
 });
 
+// BLOCK USER ----------:>
+app.patch("/users/block/:id",  async (req, res) => {
+    const id = req.params.id;
+    const filter = { _id: new ObjectId(id) };
+    const updateDoc = {
+        $set: {
+            status: "Blocked"
+        },      
+    };
+    const result = await userCollection.updateOne(filter, updateDoc);
+    res.send(result);
+});
+
+
 // USER BY EMAIL ----------->
 app.get("/users/:email", async(req, res) => {
     const email = req.params.email
@@ -103,33 +119,38 @@ app.get("/users/:email", async(req, res) => {
     res.send(result)
 })
     
-
+// POST TRANSACTIONS ------------->
 app.post("/transactions", async (req, res) => {
     const transactions = req.body
     const result = await transactionCollection.insertOne(transactions)
     res.send(result)
 })
 
+// GET ALL TRANSACTIONS ------------->
 app.get("/transactions", async(req,res) => {
     const result = await transactionCollection.find().toArray()
     res.send(result)
 })
 
 // SEND MONEY ---->
-app.patch("/send-money/:mobile", async(req, res) =>{
-    const mobile = req.params.mobile
+app.patch("/send-money/:id", async(req, res) =>{
+    const id = req.params.id
     const {moneyChange} = req.body
-    const query = {mobile: mobile}
+    const moneyChangeNumber = parseFloat(moneyChange);
+ 
+    const filter = { _id: new ObjectId(id) };
     const updateDoc = {   
         $inc: {
-            balance: parseFloat(moneyChange)
+            balance: moneyChangeNumber
         },   
     };
-    const result = await userCollection.updateOne(query, updateDoc);
+    const result = await userCollection.updateOne(filter, updateDoc);
     res.send(result);
+    console.log(result);
+    console.log(`send-money - Update Result: ${JSON.stringify(result)}`);
 })
 
-
+// REDUCE MONEY OF SENDER ------>
 app.patch("/reduce-money/:id", async (req, res) =>{
     const id = req.params.id
     const {moneyChange} = req.body
@@ -143,9 +164,73 @@ app.patch("/reduce-money/:id", async (req, res) =>{
     res.send(result);
 })
 
+// CASH IN -------->
+app.post("/cash-in", async(req, res) => {
+    const cashIn = req.body
+    const result = await cashInCollection.insertOne(cashIn)
+    res.send(result)
+})
 
+// GET CASH IN -------->
+app.get("/cash-in", async(req, res) => {
+    const result = await cashInCollection.find().toArray()
+    res.send(result)
+})
 
+app.get("/cash-in/:id", async(req, res) => {
+    const id = req.params.id
+    const filter = { _id: new ObjectId(id) };
+    const result = await cashInCollection.findOne(filter)
+    res.send(result)
+})
 
+app.patch("/cash-in/:id", async(req, res) =>{
+    const id = req.params.id
+    const filter = { _id: new ObjectId(id) };
+    const updateDoc = {
+        $set: {
+            status: "Approved"
+        },      
+    };
+    const result = await cashInCollection.updateOne(filter, updateDoc);
+    res.send(result);
+})
+
+// CASH OUT -------->
+app.post("/cash-out", async(req, res) => {
+    const cashOut = req.body
+    const result = await cashOutCollection.insertOne(cashOut)
+    res.send(result)
+})
+
+// GET CASH OUT -------->
+app.get("/cash-out", async(req, res) => {
+    const result = await cashOutCollection.find().toArray()
+    res.send(result)
+})
+
+// PIN VALIDATION --------->
+app.post('/validate-pin', async (req, res) => {
+    const { name, PIN } = req.body;
+    try {
+      // Retrieve the user from the database
+      const user = await userCollection.findOne({ name });
+      if (!user) {
+        return res.status(404).send({ valid: false, message: 'User not found' });
+      }
+      // Compare the provided PIN with the hashed PIN in the database
+      const isMatch = await bcrypt.compare(PIN, user.PIN);
+  
+      if (isMatch) {
+        res.status(200).send({ valid: true, message: 'PIN is valid' });
+      } else {
+        res.status(401).send({ valid: false, message: 'Invalid PIN' });
+      }
+    } catch (error) {
+    //   res.status(500).send({ valid: false, message: error.message });
+    }
+  });
+  
 
 
 
